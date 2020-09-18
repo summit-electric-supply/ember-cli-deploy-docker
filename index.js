@@ -4,7 +4,7 @@ const BasePlugin = require('ember-cli-deploy-plugin');
 const execa = require('execa');
 
 module.exports = {
-  name: require('./package').name,
+  name: 'ember-cli-deploy-docker',
 
   createDeployPlugin(options) {
     const DockerBuildPlugin = BasePlugin.extend({
