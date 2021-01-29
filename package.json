@@ -1,6 +1,6 @@
 {
   "name": "@summit-electric-supply/ember-cli-deploy-docker",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "A ember-cli-deploy plugin to build and push a docker image.",
   "keywords": [
     "ember-addon",
