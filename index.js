@@ -30,6 +30,9 @@ module.exports = {
         distDir(context) {
           return `./${context.distDir}/`;
         },
+        version(context) {
+          return context.project.pkg.version;
+        },
       },
 
       requiredConfig: ['name'],
@@ -46,13 +49,13 @@ module.exports = {
 
       async upload(context) {
         const root              = context.project.root;
-        const version           = context.project.pkg.version;
         const distDir           = path.resolve(root, this.readConfig('distDir'));
         const dockerBuildArgs   = this.readConfig('dockerBuildArgs');
         const dockerfile        = path.resolve(root, this.readConfig('dockerfile'));
         const dockerPushArgs    = this.readConfig('dockerPushArgs');
         const name              = this.readConfig('name');
         const tags              = this.readConfig('tags');
+        const version           = this.readConfig('version');
 
         const buildCommand = [
           'build',

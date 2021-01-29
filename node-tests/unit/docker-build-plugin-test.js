@@ -59,7 +59,10 @@ test.beforeEach(async assert => {
         },
         distFiles(context) {
           return context.distFiles;
-        }
+        },
+        version(context) {
+          return context.project.pkg.version;
+        },
       }
     }
   };
