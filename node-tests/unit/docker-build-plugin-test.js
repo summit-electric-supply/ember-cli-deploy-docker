@@ -1,5 +1,5 @@
 const { exists, MockUI } = require('../test-helper');
-const { join } = require('path');
+const { join, resolve } = require('path');
 const { mkdir, writeFile } = require('fs/promises');
 const rmdir = require('del');
 const subject = require('../../index');
@@ -49,11 +49,11 @@ test.beforeEach(async assert => {
     config: {
       docker: {
         name: '@foo-bar/test-project',
-        dockerBuildArgs: [],
+        dockerBuildArgs: ['--build-arg', 'distDir=tmp/test-dist'],
         dockerDistDirArg: 'distDir',
         dockerfile: 'Dockerfile',
-        dockerPushArgs: [],
-        tagAsLatest: true,
+        dockerPushArgs: ['--all'],
+        tags: ['latest'],
         distDir(context) {
           return context.distDir;
         },
@@ -95,81 +95,109 @@ test.afterEach(async assert => {
 test.serial('commands and messages', async assert => {
   await assert.context.plugin.upload(assert.context.context);
 
-  assert.deepEqual(assert.context.commands, [
-    'docker',
+  const root = assert.context.context.project.root;
+  const distDir = assert.context.context.distDir;
+
+  assert.deepEqual(
+    assert.context.commands,
     [
-      'build',
-      '--file',
-      'Dockerfile',
-      '--build-arg',
-      'distDir=tmp/test-dist',
-      '-t',
-      '@foo-bar/test-project:1.2.3',
-      '-t',
-      '@foo-bar/test-project:latest',
-      process.cwd(),
+      'docker',
+      [
+        'build',
+        '--file',
+        resolve(root, 'Dockerfile'),
+        '--build-arg',
+        'distDir=tmp/test-dist',
+        '-t',
+        '@foo-bar/test-project:1.2.3',
+        resolve(root, distDir),
+      ],
+      'docker',
+      [
+        'tag',
+        '@foo-bar/test-project:1.2.3',
+        '@foo-bar/test-project:latest',
+      ],
+      'docker',
+      [
+        'push',
+        '--all',
+        '@foo-bar/test-project:1.2.3',
+      ],
+      'docker',
+      [
+        'push',
+        '--all',
+        '@foo-bar/test-project:latest',
+      ],
     ],
-    'docker',
-    [
-      'push',
-      '@foo-bar/test-project:1.2.3',
-    ],
-    'docker',
-    [
-      'push',
-      '@foo-bar/test-project:latest',
-    ],
-  ]);
+  );
 
   const message1 = [
-    '- preparing to run docker build --file Dockerfile --build-arg distDir=tmp/test-dist',
-    '-t @foo-bar/test-project:1.2.3 -t @foo-bar/test-project:latest',
-    process.cwd(),
+    `- preparing to run docker build --file ${resolve(root, 'Dockerfile')}`,
+    '--build-arg distDir=tmp/test-dist -t @foo-bar/test-project:1.2.3',
+    resolve(root, distDir),
   ].join(' ');
 
   const message2 = [
-    '- docker build --file Dockerfile --build-arg distDir=tmp/test-dist',
-    '-t @foo-bar/test-project:1.2.3 -t @foo-bar/test-project:latest',
-    process.cwd(),
+    `- docker build --file ${resolve(root, 'Dockerfile')}`,
+    '--build-arg distDir=tmp/test-dist -t @foo-bar/test-project:1.2.3',
+    resolve(root, distDir),
+  ].join(' ');
+
+  const message7 = [
+    '- preparing to run docker tag @foo-bar/test-project:1.2.3 @foo-bar/test-project:latest',
+  ].join(' ');
+
+  const message8 = [
+    '- docker tag @foo-bar/test-project:1.2.3 @foo-bar/test-project:latest',
   ].join(' ');
 
   const message3 = [
-    '- preparing to run docker push @foo-bar/test-project:1.2.3',
+    '- preparing to run docker push --all @foo-bar/test-project:1.2.3',
   ].join(' ');
 
   const message4 = [
-    '- docker push @foo-bar/test-project:1.2.3',
+    '- docker push --all @foo-bar/test-project:1.2.3',
   ].join(' ');
 
   const message5 = [
-    '- preparing to run docker push @foo-bar/test-project:latest',
+    '- preparing to run docker push --all @foo-bar/test-project:latest',
   ].join(' ');
 
   const message6 = [
-    '- docker push @foo-bar/test-project:latest',
+    '- docker push --all @foo-bar/test-project:latest',
   ].join(' ');
 
-  assert.deepEqual(assert.context.context.ui.messages, [
-    message1,
-    message2,
-    message3,
-    message4,
-    message5,
-    message6,
-  ]);
+  assert.deepEqual(
+    assert.context.context.ui.messages,
+    [
+      message1,
+      message2,
+      message7,
+      message8,
+      message3,
+      message4,
+      message5,
+      message6,
+    ],
+  );
 });
 
 test.serial('error handling', async assert => {
   assert.context.forceExecaError = true;
+
+  const root = assert.context.context.project.root;
+  const distDir = assert.context.context.distDir;
 
   const error = await assert.throwsAsync(async () => {
     await assert.context.plugin.upload(assert.context.context);
   });
 
   const message = [
-    'docker build --file Dockerfile --build-arg distDir=tmp/test-dist',
-    '-t @foo-bar/test-project:1.2.3 -t @foo-bar/test-project:latest',
-    process.cwd(),
+    `docker build --file ${resolve(root, 'Dockerfile')}`,
+    '--build-arg distDir=tmp/test-dist -t @foo-bar/test-project:1.2.3',
+    resolve(root, distDir),
   ].join(' ');
 
   assert.is(error.message, message);

@@ -1,6 +1,7 @@
 'use strict';
 
 const BasePlugin = require('ember-cli-deploy-plugin');
+const path = require('path');
 const execa = require('execa');
 
 module.exports = {
@@ -13,10 +14,9 @@ module.exports = {
 
       defaultConfig: {
         dockerBuildArgs: [],
-        dockerDistDirArg: 'distDir',
         dockerfile: 'Dockerfile',
         dockerPushArgs: [],
-        tagAsLatest: true,
+        tags: ['latest'],
         distDir(context) {
           return `./${context.distDir}/`;
         },
@@ -27,43 +27,42 @@ module.exports = {
       runAfter: 'ember-cli-deploy-build',
 
       async upload(context) {
-        const distDir           = this.readConfig('distDir');
+        const root              = context.project.root;
+        const version           = context.project.pkg.version;
+        const distDir           = path.resolve(root, this.readConfig('distDir'));
         const dockerBuildArgs   = this.readConfig('dockerBuildArgs');
-        const dockerDistDirArg  = this.readConfig('dockerDistDirArg');
-        const dockerfile        = this.readConfig('dockerfile');
+        const dockerfile        = path.resolve(root, this.readConfig('dockerfile'));
         const dockerPushArgs    = this.readConfig('dockerPushArgs');
         const name              = this.readConfig('name');
-        const root              = context.project.root;
-        const tagAsLatest       = this.readConfig('tagAsLatest');
-        const version           = context.project.pkg.version;
-        const tags              = ['-t', `${name}:${version}`];
-
-        if (tagAsLatest) {
-          tags.push('-t', `${name}:latest`);
-        }
+        const tags              = this.readConfig('tags');
 
         const buildCommand = [
           'build',
           '--file',
           dockerfile,
-          '--build-arg',
-          `${dockerDistDirArg}=${distDir}`,
-          ...tags,
           ...dockerBuildArgs,
-          root,
+          '-t',
+          `${name}:${version}`,
+          distDir,
         ];
+
+        const buildTagCommands = tags.map(tag => [
+          'tag',
+          `${name}:${version}`,
+          `${name}:${tag}`,
+        ]);
 
         const pushVersionCommand = [
           'push',
-          `${name}:${version}`,
           ...dockerPushArgs,
+          `${name}:${version}`,
         ];
 
-        const pushLatestCommand = [
+        const pushTagCommands = tags.map(tag => [
           'push',
-          `${name}:latest`,
           ...dockerPushArgs,
-        ];
+          `${name}:${tag}`,
+        ])
 
         try {
           this.log(`preparing to run docker ${buildCommand.join(' ')}`, { verbose: true });
@@ -75,6 +74,20 @@ module.exports = {
           this.log(exception.message, { color: 'red' });
 
           throw exception;
+        }
+
+        for (const buildTagCommand of buildTagCommands) {
+          try {
+            this.log(`preparing to run docker ${buildTagCommand.join(' ')}`, { verbose: true });
+
+            const { stdout } = await this.execa('docker', buildTagCommand);
+
+            this.log(stdout, { verbose: true });
+          } catch (exception) {
+            this.log(exception.message, { color: 'red' });
+
+            throw exception;
+          }
         }
 
         try {
@@ -89,11 +102,11 @@ module.exports = {
           throw exception;
         }
 
-        if (tagAsLatest) {
+        for (const pushTagCommand of pushTagCommands) {
           try {
-            this.log(`preparing to run docker ${pushLatestCommand.join(' ')}`, { verbose: true });
+            this.log(`preparing to run docker ${pushTagCommand.join(' ')}`, { verbose: true });
 
-            const { stdout } = await this.execa('docker', pushLatestCommand);
+            const { stdout } = await this.execa('docker', pushTagCommand);
 
             this.log(stdout, { verbose: true });
           } catch (exception) {
