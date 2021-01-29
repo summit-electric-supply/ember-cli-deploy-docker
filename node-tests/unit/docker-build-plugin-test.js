@@ -134,39 +134,21 @@ test.serial('commands and messages', async assert => {
   );
 
   const message1 = [
-    `- preparing to run docker build --file ${resolve(root, 'Dockerfile')}`,
+    `- ✔  docker build --file ${resolve(root, 'Dockerfile')}`,
     '--build-arg distDir=tmp/test-dist -t @foo-bar/test-project:1.2.3',
     resolve(root, distDir),
   ].join(' ');
 
   const message2 = [
-    `- docker build --file ${resolve(root, 'Dockerfile')}`,
-    '--build-arg distDir=tmp/test-dist -t @foo-bar/test-project:1.2.3',
-    resolve(root, distDir),
-  ].join(' ');
-
-  const message7 = [
-    '- preparing to run docker tag @foo-bar/test-project:1.2.3 @foo-bar/test-project:latest',
-  ].join(' ');
-
-  const message8 = [
-    '- docker tag @foo-bar/test-project:1.2.3 @foo-bar/test-project:latest',
+    '- ✔  docker tag @foo-bar/test-project:1.2.3 @foo-bar/test-project:latest',
   ].join(' ');
 
   const message3 = [
-    '- preparing to run docker push --all @foo-bar/test-project:1.2.3',
+    '- ✔  docker push --all @foo-bar/test-project:1.2.3',
   ].join(' ');
 
   const message4 = [
-    '- docker push --all @foo-bar/test-project:1.2.3',
-  ].join(' ');
-
-  const message5 = [
-    '- preparing to run docker push --all @foo-bar/test-project:latest',
-  ].join(' ');
-
-  const message6 = [
-    '- docker push --all @foo-bar/test-project:latest',
+    '- ✔  docker push --all @foo-bar/test-project:latest',
   ].join(' ');
 
   assert.deepEqual(
@@ -174,12 +156,8 @@ test.serial('commands and messages', async assert => {
     [
       message1,
       message2,
-      message7,
-      message8,
       message3,
       message4,
-      message5,
-      message6,
     ],
   );
 });

@@ -10,7 +10,17 @@ module.exports = {
   createDeployPlugin(options) {
     const DockerBuildPlugin = BasePlugin.extend({
       name: 'docker',
-      execa: options.execa ?? execa,
+      _execa: options.execa ?? execa,
+
+      async execa(command, args) {
+        try {
+          this.info(command, ...args);
+          return await this._execa(command, args);
+        } catch (error) {
+          this.error(error);
+          throw error;
+        }
+      },
 
       defaultConfig: {
         dockerBuildArgs: [],
@@ -25,6 +35,14 @@ module.exports = {
       requiredConfig: ['name'],
 
       runAfter: 'ember-cli-deploy-build',
+
+      info(...messages) {
+        this.log(`✔  ${messages.join(' ')}`, { verbose: true });
+      },
+
+      error(error) {
+        this.log(error, { color: 'red' });
+      },
 
       async upload(context) {
         const root              = context.project.root;
@@ -65,54 +83,30 @@ module.exports = {
         ])
 
         try {
-          this.log(`preparing to run docker ${buildCommand.join(' ')}`, { verbose: true });
-
-          const { stdout } = await this.execa('docker', buildCommand);
-
-          this.log(stdout, { verbose: true });
-        } catch (exception) {
-          this.log(exception.message, { color: 'red' });
-
-          throw exception;
+          await this.execa('docker', buildCommand);
+        } catch (error) {
+          throw error;
         }
 
         for (const buildTagCommand of buildTagCommands) {
           try {
-            this.log(`preparing to run docker ${buildTagCommand.join(' ')}`, { verbose: true });
-
-            const { stdout } = await this.execa('docker', buildTagCommand);
-
-            this.log(stdout, { verbose: true });
-          } catch (exception) {
-            this.log(exception.message, { color: 'red' });
-
-            throw exception;
+            await this.execa('docker', buildTagCommand);
+          } catch (error) {
+            throw error;
           }
         }
 
         try {
-          this.log(`preparing to run docker ${pushVersionCommand.join(' ')}`, { verbose: true });
-
-          const { stdout } = await this.execa('docker', pushVersionCommand);
-
-          this.log(stdout, { verbose: true });
-        } catch (exception) {
-          this.log(exception.message, { color: 'red' });
-
-          throw exception;
+          await this.execa('docker', pushVersionCommand);
+        } catch (error) {
+          throw error;
         }
 
         for (const pushTagCommand of pushTagCommands) {
           try {
-            this.log(`preparing to run docker ${pushTagCommand.join(' ')}`, { verbose: true });
-
-            const { stdout } = await this.execa('docker', pushTagCommand);
-
-            this.log(stdout, { verbose: true });
-          } catch (exception) {
-            this.log(exception.message, { color: 'red' });
-
-            throw exception;
+            await this.execa('docker', pushTagCommand);
+          } catch (error) {
+            throw error;
           }
         }
       },
